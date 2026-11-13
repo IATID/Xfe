@@ -1,0 +1,117 @@
+index.ts
+export * from './src/actions';
+export * from './src/reducers';
+export * from './src/selectors';
+export * from './src/types';
+
+
+
+reducers.ts
+export const searchReducer = createReducer(initialState, builder => {
+  builder
+    .addCase(setNdgSearchInfo, (state, action) => {
+      state.searchInfo = { ...initialState.searchInfo, ndg: action.payload };
+    })
+    .addCase(setGorSearchInfo, (state, action) => {
+      state.searchInfo = { ...initialState.searchInfo, gorNdg: action.payload };
+    })
+    .addCase(setAccountSearchInfo, (state, action) => {
+      state.searchInfo = { ...initialState.searchInfo, accountNumber: action.payload };
+    })
+    .addCase(getSuggestionTransID.pending, state => {
+      state.suggestion = initialState.suggestion;
+    })
+    .addCase(getSuggestionTransID.fulfilled, (state, action) => {
+      state.suggestion.transID = action.payload;
+    })
+  ......
+});
+
+
+
+
+actions.ts
+// doar modificari simple in state
+export const setNdgSearchInfo = createAction<string, 'search/setNdgSearchInfo'>('search/setNdgSearchInfo');
+export const setGorSearchInfo = createAction<string, 'search/setGorSearchInfo'>('search/setGorSearchInfo');
+export const setAccountSearchInfo = createAction<string, 'search/setAccountSearchInfo'>('search/setAccountSearchInfo');
+//thunk
+export const getSuggestionTransID = createAsyncThunk<RestResponseDtoListSuggestionDTO, string, any>(
+  'search/getSuggestionTransID',
+  async (transID, { rejectWithValue, getState, dispatch }) => {
+    try {
+      //const search = getState().search;
+      dispatch(showLoader(TypeLoader.TRANS_ID));
+      const request: GetSuggestionRequest = {
+        value: transID,
+        entity: TransactionEnums.TransactionId,
+      };
+      return new SearchApi(getConfiguration(Configuration, getState))
+        .getSuggestion(request)
+        .then((result: RestResponseDtoListSuggestionDTO) => {
+          dispatch(hideLoader(TypeLoader.TRANS_ID));
+          return result || '';
+        })
+        .catch((error: unknown) => {
+          dispatch(hideLoader(TypeLoader.TRANS_ID));
+          return rejectWithValue(error);
+        });
+    } catch (error: unknown) {
+      dispatch(hideLoader(TypeLoader.TRANS_ID));
+      return rejectWithValue(error);
+    }
+  }
+);
+export const getSuggestionTransName = createAsyncThunk<RestResponseDtoListSuggestionDTO, string, any>(
+  'search/getSuggestionTransName',
+  async (transName, { rejectWithValue, getState, dispatch }) => {
+    try {
+      //const search = getState().search;
+      dispatch(showLoader(TypeLoader.TRANS_NAME));
+      const request: GetSuggestionRequest = {
+        value: transName,
+        entity: TransactionEnums.TransactionName,
+      };
+      return new SearchApi(getConfiguration(Configuration, getState))
+        .getSuggestion(request)
+        .then((result: RestResponseDtoListSuggestionDTO) => {
+          dispatch(hideLoader(TypeLoader.TRANS_NAME));
+          return result || '';
+        })
+        .catch((error: unknown) => {
+          dispatch(hideLoader(TypeLoader.TRANS_NAME));
+          return rejectWithValue(error);
+        });
+    } catch (error: unknown) {
+      dispatch(hideLoader(TypeLoader.TRANS_NAME));
+      return rejectWithValue(error);
+    }
+  }
+);
+export const getSuggestionNdg = createAsyncThunk<RestResponseDtoListSuggestionDTO, string, any>(
+  'search/getSuggestionNdg',
+  async (ndg, { rejectWithValue, getState, dispatch }) => {
+    try {
+      //const search = getState().search;
+      dispatch(showLoader(TypeLoader.NDG));
+      const value = ndg.length >= 8 ? ndg.replace(/^0+/, '') : ndg.padStart(4, '0');
+      const request: GetSuggestionRequest = {
+        value,
+        entity: TransactionEnums.Ndg,
+      };
+      return new SearchApi(getConfiguration(Configuration, getState))
+        .getSuggestion(request)
+        .then((result: RestResponseDtoListSuggestionDTO) => {
+          dispatch(hideLoader(TypeLoader.NDG));
+          return result || '';
+        })
+        .catch((error: unknown) => {
+          dispatch(hideLoader(TypeLoader.NDG));
+          return rejectWithValue(error);
+        });
+    } catch (error: unknown) {
+      dispatch(hideLoader(TypeLoader.NDG));
+      return rejectWithValue(error);
+    }
+  }
+);
