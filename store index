@@ -1,0 +1,93 @@
+import { configureStore } from '@reduxjs/toolkit';
+import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
+import { searchReducer } from './state-search';
+import { labelReducer } from './state-label';
+import { commonReducer } from './state-common/src/reducers';
+import { loginReducer } from './state-login';
+import { transactionReducer } from './state-transaction';
+import { errorManagerMiddleware } from './state-common/error';
+import { hedgingReducer } from './state-hedging';
+import { propertyReducer } from './state-property';
+import { amortisationReducer } from './state-amortisation';
+import { syndicationDataReducer } from './state-syndication';
+import { esgOverviewReducer } from './state-esg-overview';
+import { kpisReducer } from './state-kpis';
+import { centralManualInputReducer } from './state-central-manual-input/src/reducers';
+import { reportingReducer } from './state-reporting';
+import { kvrReducer } from './state-kvr';
+
+// configuration store
+export const store = configureStore({
+  reducer: {
+    search: searchReducer,
+    labels: labelReducer,
+    common: commonReducer,
+    login: loginReducer,
+    transaction: transactionReducer,
+    hedging: hedgingReducer,
+    property: propertyReducer,
+    amortisation: amortisationReducer,
+    syndicationData: syndicationDataReducer,
+    esgOverview: esgOverviewReducer,
+    kpis: kpisReducer,
+    centralManualInput: centralManualInputReducer,
+    reporting: reportingReducer,
+    kvr: kvrReducer,
+  },
+  middleware: getDefaultMiddleware => {
+    return getDefaultMiddleware({
+      serializableCheck: false,
+      thunk: {
+        extraArgument: {},
+      },
+    }).concat(errorManagerMiddleware);
+  },
+});
+
+export type AppDispatch = typeof store.dispatch;
+
+// hooks redux for dispatch and selector typed
+export const useAppDispatch = () => useDispatch<AppDispatch>();
+export const useAppSelector: TypedUseSelectorHook<ReturnType<typeof store.getState>> = useSelector;
+
+
+!!!!!!!!!!
+middleware
+-mecanism care interceptează fiecare action înainte să ajungă la reducer și/sau după ce a fost procesată
+getDefaultMiddleware:
+  -Aici practic aceasta metoda get() înseamnă "dă-mi middleware-urile standard Redux Toolkit".
+  -Redux Toolkit adaugă implicit mai multe middleware-uri utile. 
+      redux-thunk (pentru acțiuni asincrone)
+      verificări de imutabilitate (immutableCheck)
+      verificări de serializare (serializableCheck)
+serializableCheck: false
+  -dezactivezi validarea de obiecte json serializabile
+  -se face cand: stochezi obiecte Date, stochezi erori HTTP (AxiosError), lucrezi cu fișiere (File, Blob), ai obiecte complexe venite din librării externe
+thunk
+  - folosirea actiuni asincrone
+extraArgument
+  - Permite injectarea unor servicii comune în toate thunk-urile.
+    extraArgument: { apiClient, ... },
+errorManagerMiddleware
+  -înseamnă că după middleware-urile standard se adaugă unul custom al aplicației.
+  -Foarte probabil acest middleware este folosit pentru: tratarea centralizată a erorilor, afișarea toast-urilor / popup-urilor, logare, audit, redirect la login pe 401
+    dispatch(action) -> default middleware -> errorManagerMiddleware -> reducers
+
+!!!!!!!!!!
+       // hooks redux for dispatch and selector typed
+      - A: creare hook custom; de folosit strict in componente React si alte hooks; pt fisiere ca service, utilitare, thunk-uri, middleware va trebui sa folosesti varianta clasica de apel la store.getState si store.dispactch(action())
+      - useAppDispatch, useAppSelector - pot fi acum folosite in toata aplicatia foarte simplu printr-un import si nu mai trebuie importat de fiecare data librariile de:useDispatch, useSelector
+        // inainte
+        // useAppSelector: Fără tipizare, parametrul state este de multe ori unknown sau any.
+        // useDispatch: Fără tipizare, TypeScript nu știe exact ce fel de acțiuni poate trimite.
+        import { useDispatch, useSelector } from 'react-redux';
+        const dispatch = useDispatch();
+        const data = useSelector((state: any) => state.search.results);
+
+        // de acum doar:
+        // useAppSelector: cu tipizare, TypeScript știe că state-ul are forma: {search:, labels:, common:, ... }
+        // useAppDispatch: cu tiizare, typescript stie ca e de tipul: typeof store.dispatch
+        // vei avea autocomplete pentru: thunk-uri (createAsyncThunk), action creators din slices, verificare la compilare
+        import { useAppDispatch, useAppSelector } from '../store';
+        const dispatch = useAppDispatch();
+        const results = useAppSelector( state => state.search.results );
